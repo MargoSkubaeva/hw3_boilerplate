@@ -2,9 +2,16 @@ import express from 'express'
 import swaggerUi from 'swagger-ui-express'
 import swaggerJsdoc from 'swagger-jsdoc'
 import { errors as celebrateErrors } from 'celebrate'
+import cookieParser from 'cookie-parser'
+
 import announcementsRouter from './src/routes/announcements.routes.js'
+import authRoutes from './src/routes/auth.routes.js'
 
 const app = express()
+
+// Middleware
+app.use(express.json())
+app.use(cookieParser())
 
 // Swagger configuration
 const swaggerOptions = {
@@ -26,40 +33,39 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions)
 
-app.use(express.json())
-
+// Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
+// Routes
+app.use('/announcements', announcementsRouter)
+app.use('/auth', authRoutes)
+
+// Celebrate errors
 app.use(celebrateErrors())
 
-app.use('/announcements', announcementsRouter)
-// app.use('/api/announcements', announcementsRouter)
-
-// 404 Not Found handler - must be after all routes
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' })
 })
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err)
 
-  // JSON parsing errors (invalid JSON format)
   if (err.type === 'entity.parse.failed' && err.status === 400) {
     return res.status(400).json({
       statusCode: 400,
       error: 'Bad Request',
       message: 'Invalid JSON',
-      validation: {
-        body: {
-          source: 'body',
-          keys: [],
-          message: 'Invalid JSON format in request body',
-        },
-      },
     })
   }
 
+  if (err.status) {
+    return res.status(err.status).json({
+      error: err.message,
+    })
+  }
+  
   if (err.code === 'P2025') {
     return res.status(404).json({ error: 'Resource not found' })
   }
@@ -72,7 +78,7 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: 'Foreign key constraint failed' })
   }
 
-  res.status(500).json({ error: 'Internal server error' })
+  return res.status(500).json({ error: 'Internal server error' })
 })
 
 const PORT = process.env.PORT || 3000

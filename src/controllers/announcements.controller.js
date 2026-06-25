@@ -1,20 +1,20 @@
 import prisma from '../../prisma/client.js'
 
-const PER_PAGE = 10
-
+// GET ALL
 export const getAnnouncements = async (req, res) => {
-  const { search, sort, page = 1 } = req.query
+  const { search = '', sort = 'newest', page = 1 } = req.query
 
-  const currentPage = Number(page)
+  const perPage = 10
+  const skip = (Number(page) - 1) * perPage
 
-  const where = {}
-
-  if (search?.trim()) {
-    where.title = {
-      contains: search,
-      mode: 'insensitive',
-    }
-  }
+  const where = search
+    ? {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      }
+    : {}
 
   const orderBy = {
     createdAt: sort === 'oldest' ? 'asc' : 'desc',
@@ -24,52 +24,93 @@ export const getAnnouncements = async (req, res) => {
     prisma.announcement.findMany({
       where,
       orderBy,
-      skip: (currentPage - 1) * PER_PAGE,
-      take: PER_PAGE,
+      skip,
+      take: perPage,
     }),
     prisma.announcement.count({ where }),
   ])
 
-  res.json({
+  return res.json({
     data,
     pagination: {
       total,
-      page: currentPage,
-      totalPages: Math.ceil(total / PER_PAGE),
-      perPage: PER_PAGE,
+      page: Number(page),
+      totalPages: Math.ceil(total / perPage),
+      perPage,
     },
   })
 }
 
+// GET BY ID
 export const getAnnouncementById = async (req, res) => {
+  const { id } = req.params
+
   const announcement = await prisma.announcement.findUniqueOrThrow({
-    where: { id: Number(req.params.id) },
+    where: { id: Number(id) },
   })
 
-  res.json(announcement)
+  return res.json(announcement)
 }
 
+// CREATE (🔐 protected + ownership)
 export const createAnnouncement = async (req, res) => {
+  const userId = req.user.id
+
   const announcement = await prisma.announcement.create({
-    data: req.body,
+    data: {
+      ...req.body,
+      userId,
+    },
   })
 
-  res.status(201).json(announcement)
+  return res.status(201).json(announcement)
 }
 
+// UPDATE (🔐 protected + ownership)
 export const updateAnnouncement = async (req, res) => {
-  const announcement = await prisma.announcement.update({
-    where: { id: Number(req.params.id) },
+  const { id } = req.params
+  const userId = req.user.id
+
+  const announcement = await prisma.announcement.findUnique({
+    where: { id: Number(id) },
+  })
+
+  if (!announcement) {
+    return res.status(404).json({ error: 'Not found' })
+  }
+
+  if (announcement.userId !== userId) {
+    return res.status(403).json({ error: 'Access denied' })
+  }
+
+  const updated = await prisma.announcement.update({
+    where: { id: Number(id) },
     data: req.body,
   })
 
-  res.json(announcement)
+  return res.json(updated)
 }
 
+// DELETE (🔐 protected + ownership)
 export const deleteAnnouncement = async (req, res) => {
-  await prisma.announcement.delete({
-    where: { id: Number(req.params.id) },
+  const { id } = req.params
+  const userId = req.user.id
+
+  const announcement = await prisma.announcement.findUnique({
+    where: { id: Number(id) },
   })
 
-  res.status(204).end()
+  if (!announcement) {
+    return res.status(404).json({ error: 'Not found' })
+  }
+
+  if (announcement.userId !== userId) {
+    return res.status(403).json({ error: 'Access denied' })
+  }
+
+  await prisma.announcement.delete({
+    where: { id: Number(id) },
+  })
+
+  return res.status(204).end()
 }

@@ -43,3 +43,59 @@ Content-Type: application/json
 
 ### DELETE
 DELETE http://localhost:3000/announcements/1
+
+
+### REGISTER
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "username": "ivan",
+  "password": "123456",
+  "name": "Ivan"
+}
+
+### LOGIN
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "ivan",
+  "password": "123456"
+}
+
+### ME (after login - встав token)
+GET http://localhost:3000/auth/me
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### REFRESH
+POST http://localhost:3000/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "YOUR_REFRESH_TOKEN"
+}
+
+### LOGOUT
+POST http://localhost:3000/auth/logout
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### PATCH invalid token
+PATCH http://localhost:3000/announcements/999
+Authorization: Bearer fake_token
+
+### ME without token
+GET http://localhost:3000/auth/me
+
+### PATCH чужого оголошення
+PATCH http://localhost:3000/announcements/2
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "price": 100
+}
+
+### DELETE forbidden
+DELETE http://localhost:3000/announcements/2
+Authorization: Bearer YOUR_TOKEN_HERE
