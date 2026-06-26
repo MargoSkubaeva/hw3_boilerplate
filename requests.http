@@ -1,49 +1,27 @@
 ### GET all
 GET http://localhost:3000/announcements
 
+###
+
 ### GET search
 GET http://localhost:3000/announcements?search=asus
+
+###
 
 ### GET sort + page
 GET http://localhost:3000/announcements?sort=oldest&page=2
 
+###
+
 ### GET by id
 GET http://localhost:3000/announcements/1
+
+###
 
 ### GET not found
 GET http://localhost:3000/announcements/9999
 
-### POST valid
-POST http://localhost:3000/announcements
-Content-Type: application/json
-
-{
-  "title": "Продам ноутбук ASUS",
-  "description": "Чудовий стан, майже новий",
-  "price": 18000,
-  "category": "sale",
-  "contactInfo": "0991234567"
-}
-
-### POST invalid
-POST http://localhost:3000/announcements
-Content-Type: application/json
-
-{
-  "title": "abc"
-}
-
-### PATCH
-PATCH http://localhost:3000/announcements/1
-Content-Type: application/json
-
-{
-  "price": 15000
-}
-
-### DELETE
-DELETE http://localhost:3000/announcements/1
-
+###
 
 ### REGISTER
 POST http://localhost:3000/auth/register
@@ -55,6 +33,8 @@ Content-Type: application/json
   "name": "Ivan"
 }
 
+###
+
 ### LOGIN
 POST http://localhost:3000/auth/login
 Content-Type: application/json
@@ -64,9 +44,13 @@ Content-Type: application/json
   "password": "123456"
 }
 
-### ME (after login - встав token)
+###
+
+### ME
 GET http://localhost:3000/auth/me
 Authorization: Bearer YOUR_TOKEN_HERE
+
+###
 
 ### REFRESH
 POST http://localhost:3000/auth/refresh
@@ -76,18 +60,103 @@ Content-Type: application/json
   "refreshToken": "YOUR_REFRESH_TOKEN"
 }
 
+###
+
 ### LOGOUT
 POST http://localhost:3000/auth/logout
 Authorization: Bearer YOUR_TOKEN_HERE
+
+###
+
+### CREATE announcement (JSON)
+POST http://localhost:3000/announcements
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "title": "Продам ноутбук ASUS",
+  "description": "Чудовий стан, майже новий",
+  "price": 18000,
+  "category": "sale",
+  "contactInfo": "0991234567"
+}
+
+###
+
+### CREATE announcement with image
+POST http://localhost:3000/announcements
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="title"
+
+Продам велосипед
+--boundary
+Content-Disposition: form-data; name="description"
+
+Майже новий
+--boundary
+Content-Disposition: form-data; name="price"
+
+5000
+--boundary
+Content-Disposition: form-data; name="category"
+
+sale
+--boundary
+Content-Disposition: form-data; name="contactInfo"
+
+0991234567
+--boundary
+Content-Disposition: form-data; name="image"; filename="bike.jpg"
+Content-Type: image/jpeg
+
+< ./bike.jpg
+--boundary--
+
+###
+
+### Invalid announcement
+POST http://localhost:3000/announcements
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "title": "abc"
+}
+
+###
+
+### PATCH
+PATCH http://localhost:3000/announcements/1
+Authorization: Bearer YOUR_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "price": 15000
+}
+
+###
+
+### DELETE
+DELETE http://localhost:3000/announcements/1
+Authorization: Bearer YOUR_TOKEN_HERE
+
+###
 
 ### PATCH invalid token
 PATCH http://localhost:3000/announcements/999
 Authorization: Bearer fake_token
 
+###
+
 ### ME without token
 GET http://localhost:3000/auth/me
 
-### PATCH чужого оголошення
+###
+
+### PATCH forbidden
 PATCH http://localhost:3000/announcements/2
 Authorization: Bearer YOUR_TOKEN_HERE
 Content-Type: application/json
@@ -96,6 +165,19 @@ Content-Type: application/json
   "price": 100
 }
 
+###
+
 ### DELETE forbidden
 DELETE http://localhost:3000/announcements/2
 Authorization: Bearer YOUR_TOKEN_HERE
+
+###
+
+### RATE LIMIT TEST (натисни Send Request більше 10 разів)
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "ivan",
+  "password": "123456"
+}

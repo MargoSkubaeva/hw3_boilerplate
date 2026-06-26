@@ -7,10 +7,37 @@ import cookieParser from 'cookie-parser'
 import announcementsRouter from './src/routes/announcements.routes.js'
 import authRoutes from './src/routes/auth.routes.js'
 
+import pinoHttp from 'pino-http'
+import logger from './src/logger.js'
+
+import helmet from 'helmet'
+import cors from 'cors'
+import { authLimiter } from './src/middleware/rateLimit.middleware.js'
+
 const app = express()
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  }),
+)
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',')
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }),
+)
+
 
 // Middleware
 app.use(express.json())
+app.use(
+  pinoHttp({
+    logger,
+  }),
+)
 app.use(cookieParser())
 
 // Swagger configuration
@@ -21,6 +48,15 @@ const swaggerOptions = {
       title: 'REST API',
       version: '1.0.0',
       description: 'REST API documentation',
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
     },
     servers: [
       {
@@ -38,7 +74,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 // Routes
 app.use('/announcements', announcementsRouter)
-app.use('/auth', authRoutes)
+app.use('/auth', authLimiter, authRoutes)
 
 // Celebrate errors
 app.use(celebrateErrors())
@@ -65,7 +101,7 @@ app.use((err, req, res, next) => {
       error: err.message,
     })
   }
-  
+
   if (err.code === 'P2025') {
     return res.status(404).json({ error: 'Resource not found' })
   }

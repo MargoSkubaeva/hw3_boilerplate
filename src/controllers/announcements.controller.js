@@ -1,3 +1,6 @@
+import cloudinary from '../cloudinary.js'
+import fs from 'fs/promises'
+import logger from '../logger.js'
 import prisma from '../../prisma/client.js'
 
 // GET ALL
@@ -56,16 +59,34 @@ export const getAnnouncementById = async (req, res) => {
 export const createAnnouncement = async (req, res) => {
   const userId = req.user.id
 
+  let imageUrl = null
+
+  if (req.file) {
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'announcements',
+    })
+
+    imageUrl = result.secure_url
+
+    await fs.unlink(req.file.path)
+
+    logger.info(`Photo uploaded: ${imageUrl}`)
+  }
+
   const announcement = await prisma.announcement.create({
     data: {
       ...req.body,
+      imageUrl,
       userId,
     },
   })
 
+  logger.info(`Announcement created: ${announcement.id}`)
+
   return res.status(201).json(announcement)
 }
 
+// UPDATE (🔐 protected + ownership)
 // UPDATE (🔐 protected + ownership)
 export const updateAnnouncement = async (req, res) => {
   const { id } = req.params
@@ -83,9 +104,26 @@ export const updateAnnouncement = async (req, res) => {
     return res.status(403).json({ error: 'Access denied' })
   }
 
+  let imageUrl
+
+  if (req.file) {
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'announcements',
+    })
+
+    imageUrl = result.secure_url
+
+    await fs.unlink(req.file.path)
+
+    logger.info(`Photo updated: ${imageUrl}`)
+  }
+
   const updated = await prisma.announcement.update({
     where: { id: Number(id) },
-    data: req.body,
+    data: {
+      ...req.body,
+      ...(imageUrl && { imageUrl }),
+    },
   })
 
   return res.json(updated)
